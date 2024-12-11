@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Chat App</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+      .chat-container {
+        width: 80%;
+        margin: 0 auto;
+        padding: 20px;
+        border: 1px solid #ccc;
+        border-radius: 10px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      }
+      .messages {
+        margin-top: 20px;
+        padding: 10px;
+        border-top: 1px solid #ddd;
+        height: 300px;
+        overflow-y: scroll;
+      }
+      input,
+      button {
+        margin: 5px;
+        padding: 10px;
+      }
+      button {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+      }
+      button:hover {
+        background-color: #0056b3;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="chat-container">
+      <h2>Connect and Send a Chat Message</h2>
+
+      <!-- Connection Section -->
+      <div id="connection-section">
+        <input type="text" id="userId" placeholder="Your User ID" />
+        <button onclick="connect()">Connect</button>
+        <div id="connect-status"></div>
+      </div>
+
+      <!-- Messaging Section -->
+      <div id="messaging-section" style="display: none">
+        <input
+          type="text"
+          id="userId1"
+          placeholder="Sender User ID (userId1)"
+        />
+        <input
+          type="text"
+          id="userId2"
+          placeholder="Receiver User ID (userId2)"
+        />
+        <input type="text" id="message" placeholder="Your Message" />
+        <button onclick="sendMessage()">Send Message</button>
+      </div>
+
+      <div class="messages" id="messages"></div>
+    </div>
+
+    <script>
+      let socket;
+
+      function connect() {
+        const userId = document.getElementById('userId').value;
+
+        if (userId) {
+          socket = io({ query: { userId } });
+
+          socket.on('connect', () => {
+            document.getElementById(
+              'connect-status'
+            ).textContent = `Connected as ${userId}`;
+            document.getElementById('connection-section').style.display =
+              'none';
+            document.getElementById('messaging-section').style.display =
+              'block';
+          });
+
+          socket.on('disconnect', () => {
+            document.getElementById('connect-status').textContent =
+              'Disconnected';
+            document.getElementById('connection-section').style.display =
+              'block';
+            document.getElementById('messaging-section').style.display = 'none';
+          });
+
+          socket.on('error', (data) => {
+            alert(
+              data.error || data.errorMessage || 'An unknown error occurred.'
+            );
+          });
+
+          socket.on('chat message', (data) => {
+            const { userId1, userId2, message, timeStamp } = data;
+            console.log(
+              'Received message:',
+              userId1,
+              userId2,
+              message,
+              timeStamp
+            );
+            const messageContainer = document.getElementById('messages');
+            const messageElement = document.createElement('div');
+            const date = new Date(timeStamp);
+            messageElement.textContent = `From ${userId1} to ${userId2}: ${message} (Received at ${date.toLocaleString()})`;
+            messageContainer.appendChild(messageElement);
+          });
+        } else {
+          alert('Please enter a User ID');
+        }
+      }
+
+      function sendMessage() {
+        if (!socket) {
+          alert('You must connect first');
+          return;
+        }
+
+        const userId1 = document.getElementById('userId').value;
+        const userId2 = document.getElementById('userId2').value;
+        const message = document.getElementById('message').value;
+        const timeStamp = Date.now(); // Get timestamp as a number
+
+        if (userId1 && userId2 && message) {
+          socket.emit('chat message', userId1, userId2, message, timeStamp);
+        } else {
+          alert('Please provide all required fields');
+        }
+      }
+    </script>
+  </body>
+</html>
